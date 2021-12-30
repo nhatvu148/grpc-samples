@@ -1,11 +1,11 @@
-var greets = require("../server/protos/greet_pb");
-var service = require("../server/protos/greet_grpc_pb");
+var greets = require("./protos/greet_pb");
+var service = require("./protos/greet_grpc_pb");
 
-var calc = require("../server/protos/calculator_pb");
-var calcService = require("../server/protos/calculator_grpc_pb");
+var calc = require("./protos/calculator_pb");
+var calcService = require("./protos/calculator_grpc_pb");
 
-var blogs = require("../server/protos/blog_pb");
-var blogService = require("../server/protos/blog_grpc_pb");
+var blogs = require("./protos/blog_pb");
+var blogService = require("./protos/blog_grpc_pb");
 
 const fs = require("fs");
 

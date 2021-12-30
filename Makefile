@@ -1,14 +1,14 @@
 client:
-	node client
+	node cmd/client
 
 client-go:
-	go run client/main.go
+	go run cmd/client/main.go
 
 server:
-	node server
+	node cmd/server
 
 server-go:
-	go run server/main.go
+	go run cmd/server/main.go
 
 proto:
 	protoc \
