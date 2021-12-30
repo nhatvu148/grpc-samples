@@ -17,3 +17,9 @@ Windows:
 
 - go mod edit -go=1.17
 - go get -u google.golang.org/grpc
+
+# References
+
+- https://github.com/nhatvu148/grpc-golang.git
+- https://github.com/nhatvu148/grpc-node.git
+- https://github.com/nhatvu148/grpc-csharp.git
