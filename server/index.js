@@ -1,5 +1,5 @@
-const greets = require("../server/protos/greet_pb");
-const service = require("../server/protos/greet_grpc_pb");
+const greets = require("../pb/greet_pb");
+const service = require("../pb/greet_grpc_pb");
 const fs = require("fs");
 const grpc = require("grpc");
 

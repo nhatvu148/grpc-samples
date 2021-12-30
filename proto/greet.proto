@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 package greet;
+option go_package="./protos";
 
 service GreetService {
     //unary API
