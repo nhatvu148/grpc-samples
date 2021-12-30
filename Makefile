@@ -19,7 +19,7 @@ proto:
 
 proto-go:
 	protoc \
-	--proto_path=proto proto/greet_go.proto \
+	--proto_path=proto proto/greet_go.proto proto/calculator_go.proto \
 	--go_out=plugins=grpc:pb
 
 .PHONY: all client server proto

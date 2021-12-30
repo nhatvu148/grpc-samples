@@ -9,235 +9,162 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
 
-	greetpb "github.com/nhatvu148/grpc-samples/pb"
+	calculatorpb "github.com/nhatvu148/grpc-samples/pb"
 )
 
 func main() {
 
-	fmt.Println("Hello I'm a client")
-
-	tls := false
-	opts := grpc.WithInsecure()
-	if tls {
-		certFile := "ssl/ca.crt" // Certificate Authority Trust certificate
-		creds, sslErr := credentials.NewClientTLSFromFile(certFile, "")
-		if sslErr != nil {
-			log.Fatalf("Error while loading CA trust certificate: %v", sslErr)
-			return
-		}
-		opts = grpc.WithTransportCredentials(creds)
-	}
-
-	cc, err := grpc.Dial("localhost:43567", opts)
+	fmt.Println("Calculator Client")
+	cc, err := grpc.Dial("localhost:43567", grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("could not connect: %v", err)
 	}
 	defer cc.Close()
 
-	c := greetpb.NewGreetServiceClient(cc)
+	c := calculatorpb.NewCalculatorServiceClient(cc)
 	// fmt.Printf("Created client: %f", c)
 
 	// doUnary(c)
-	doServerStreaming(c)
+
+	// doServerStreaming(c)
+
 	// doClientStreaming(c)
-	// doBiDiStreaming(c)
 
-	// doUnaryWithDeadline(c, 5*time.Second) // should complete
-	// doUnaryWithDeadline(c, 1*time.Second) // should timeout
+	doBiDiStreaming(c)
+
+	// doErrorUnary(c)
 }
 
-func doUnary(c greetpb.GreetServiceClient) {
-	fmt.Println("Starting to do a Unary RPC...")
-	req := &greetpb.GreetRequest{
-		Greeting: &greetpb.Greeting{
-			FirstName: "Nhat",
-			LastName:  "Vu",
-		},
+func doUnary(c calculatorpb.CalculatorServiceClient) {
+	fmt.Println("Starting to do a Sum Unary RPC...")
+	req := &calculatorpb.SumRequest{
+		FirstNumber:  5,
+		SecondNumber: 40,
 	}
-	res, err := c.Greet(context.Background(), req)
+	res, err := c.Sum(context.Background(), req)
 	if err != nil {
-		log.Fatalf("error while calling Greet RPC: %v", err)
+		log.Fatalf("error while calling Sum RPC: %v", err)
 	}
-	log.Printf("Response from Greet: %v", res.Result)
+	log.Printf("Response from Sum: %v", res.SumResult)
 }
 
-func doServerStreaming(c greetpb.GreetServiceClient) {
-	fmt.Println("Starting to do a Server Streaming RPC...")
-
-	req := &greetpb.GreetManyTimesRequest{
-		Greeting: &greetpb.Greeting{
-			FirstName: "Nhat",
-			LastName:  "Vu",
-		},
+func doServerStreaming(c calculatorpb.CalculatorServiceClient) {
+	fmt.Println("Starting to do a PrimeDecomposition Server Streaming RPC...")
+	req := &calculatorpb.PrimeNumberDecompositionRequest{
+		Number: 12390392840,
 	}
-
-	resStream, err := c.GreetManyTimes(context.Background(), req)
+	stream, err := c.PrimeNumberDecomposition(context.Background(), req)
 	if err != nil {
-		log.Fatalf("error while calling GreetManyTimes RPC: %v", err)
+		log.Fatalf("error while calling PrimeDecomposition RPC: %v", err)
 	}
 	for {
-		msg, err := resStream.Recv()
+		res, err := stream.Recv()
 		if err == io.EOF {
-			// we've reached the end of the stream
 			break
 		}
 		if err != nil {
-			log.Fatalf("error while reading stream: %v", err)
+			log.Fatalf("Something happened: %v", err)
 		}
-		log.Printf("Response from GreetManyTimes: %v", msg.GetResult())
+		fmt.Println(res.GetPrimeFactor())
 	}
-
 }
 
-func doClientStreaming(c greetpb.GreetServiceClient) {
-	fmt.Println("Starting to do a Client Streaming RPC...")
+func doClientStreaming(c calculatorpb.CalculatorServiceClient) {
+	fmt.Println("Starting to do a ComputeAverage Client Streaming RPC...")
 
-	requests := []*greetpb.LongGreetRequest{
-		&greetpb.LongGreetRequest{
-			Greeting: &greetpb.Greeting{
-				FirstName: "Fuad",
-			},
-		},
-		&greetpb.LongGreetRequest{
-			Greeting: &greetpb.Greeting{
-				FirstName: "Akbar",
-			},
-		},
-		&greetpb.LongGreetRequest{
-			Greeting: &greetpb.Greeting{
-				FirstName: "Lucy",
-			},
-		},
-		&greetpb.LongGreetRequest{
-			Greeting: &greetpb.Greeting{
-				FirstName: "Will",
-			},
-		},
-		&greetpb.LongGreetRequest{
-			Greeting: &greetpb.Greeting{
-				FirstName: "Jones",
-			},
-		},
-	}
-
-	stream, err := c.LongGreet(context.Background())
+	stream, err := c.ComputeAverage(context.Background())
 	if err != nil {
-		log.Fatalf("error while calling LongGreet: %v", err)
+		log.Fatalf("Error while opening stream: %v", err)
 	}
 
-	// we iterate over our slice and send each message individually
-	for _, req := range requests {
-		fmt.Printf("Sending req: %v\n", req)
-		stream.Send(req)
-		time.Sleep(1000 * time.Millisecond)
+	numbers := []int32{3, 5, 9, 54, 23}
+
+	for _, number := range numbers {
+		fmt.Printf("Sending number: %v\n", number)
+		stream.Send(&calculatorpb.ComputeAverageRequest{
+			Number: number,
+		})
 	}
 
 	res, err := stream.CloseAndRecv()
 	if err != nil {
-		log.Fatalf("error while receiving response from LongGreet: %v", err)
+		log.Fatalf("Error while receiving response: %v", err)
 	}
-	fmt.Printf("LongGreet Response: %v\n", res)
 
+	fmt.Printf("The Average is: %v\n", res.GetAverage())
 }
 
-func doBiDiStreaming(c greetpb.GreetServiceClient) {
-	fmt.Println("Starting to do a BiDi Streaming RPC...")
+func doBiDiStreaming(c calculatorpb.CalculatorServiceClient) {
+	fmt.Println("Starting to do a FindMaximum BiDi Streaming RPC...")
 
-	// we create a stream by invoking the client
-	stream, err := c.GreetEveryone(context.Background())
+	stream, err := c.FindMaximum(context.Background())
+
 	if err != nil {
-		log.Fatalf("Error while creating stream: %v", err)
-		return
-	}
-
-	requests := []*greetpb.GreetEveryoneRequest{
-		&greetpb.GreetEveryoneRequest{
-			Greeting: &greetpb.Greeting{
-				FirstName: "Bill",
-			},
-		},
-		&greetpb.GreetEveryoneRequest{
-			Greeting: &greetpb.Greeting{
-				FirstName: "Rin",
-			},
-		},
-		&greetpb.GreetEveryoneRequest{
-			Greeting: &greetpb.Greeting{
-				FirstName: "Lucy",
-			},
-		},
-		&greetpb.GreetEveryoneRequest{
-			Greeting: &greetpb.Greeting{
-				FirstName: "Mark",
-			},
-		},
-		&greetpb.GreetEveryoneRequest{
-			Greeting: &greetpb.Greeting{
-				FirstName: "Piper",
-			},
-		},
+		log.Fatalf("Error while opening stream and calling FindMaximum: %v", err)
 	}
 
 	waitc := make(chan struct{})
-	// we send a bunch of messages to the client (go routine)
+
+	// send go routine
 	go func() {
-		// function to send a bunch of messages
-		for _, req := range requests {
-			fmt.Printf("Sending message: %v\n", req)
-			stream.Send(req)
+		numbers := []int32{4, 7, 2, 19, 4, 6, 32}
+		for _, number := range numbers {
+			fmt.Printf("Sending number: %v\n", number)
+			stream.Send(&calculatorpb.FindMaximumRequest{
+				Number: number,
+			})
 			time.Sleep(1000 * time.Millisecond)
 		}
 		stream.CloseSend()
 	}()
-	// we receive a bunch of messages from the client (go routine)
+	// receive go routine
 	go func() {
-		// function to receive a bunch of messages
 		for {
 			res, err := stream.Recv()
 			if err == io.EOF {
 				break
 			}
 			if err != nil {
-				log.Fatalf("Error while receiving: %v", err)
+				log.Fatalf("Problem while reading server stream: %v", err)
 				break
 			}
-			fmt.Printf("Received: %v\n", res.GetResult())
+			maximum := res.GetMaximum()
+			fmt.Printf("Received a new maximum of...: %v\n", maximum)
 		}
 		close(waitc)
 	}()
-
-	// block until everything is done
 	<-waitc
 }
 
-func doUnaryWithDeadline(c greetpb.GreetServiceClient, timeout time.Duration) {
-	fmt.Println("Starting to do a UnaryWithDeadline RPC...")
-	req := &greetpb.GreetWithDeadlineRequest{
-		Greeting: &greetpb.Greeting{
-			FirstName: "Nhat",
-			LastName:  "Vu",
-		},
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
+func doErrorUnary(c calculatorpb.CalculatorServiceClient) {
+	fmt.Println("Starting to do a SquareRoot Unary RPC...")
 
-	res, err := c.GreetWithDeadline(ctx, req)
+	// correct call
+	doErrorCall(c, 10)
+
+	// error call
+	doErrorCall(c, -2)
+}
+
+func doErrorCall(c calculatorpb.CalculatorServiceClient, n int32) {
+	res, err := c.SquareRoot(context.Background(), &calculatorpb.SquareRootRequest{Number: n})
+
 	if err != nil {
-
-		statusErr, ok := status.FromError(err)
+		respErr, ok := status.FromError(err)
 		if ok {
-			if statusErr.Code() == codes.DeadlineExceeded {
-				fmt.Println("Timeout was hit! Deadline was exceeded")
-			} else {
-				fmt.Printf("unexpected error: %v", statusErr)
+			// actual error from gRPC (user error)
+			fmt.Printf("Error message from server: %v\n", respErr.Message())
+			fmt.Println(respErr.Code())
+			if respErr.Code() == codes.InvalidArgument {
+				fmt.Println("We probably sent a negative number!")
+				return
 			}
 		} else {
-			log.Fatalf("error while calling GreetWithDeadline RPC: %v", err)
+			log.Fatalf("Big Error calling SquareRoot: %v", err)
+			return
 		}
-		return
 	}
-	log.Printf("Response from GreetWithDeadline: %v", res.Result)
+	fmt.Printf("Result of square root of %v: %v\n", n, res.GetNumberRoot())
 }
